@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Computing Statistics — Interactive Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #151820;
+    --border: #252a35;
+    --accent: #5cf0b0;
+    --accent2: #f05c8a;
+    --accent3: #f0c05c;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --correct: #1a3d2b;
+    --correct-border: #5cf0b0;
+    --wrong: #3d1a26;
+    --wrong-border: #f05c8a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .score-pill {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    background: var(--border);
+    padding: 6px 16px;
+    border-radius: 999px;
+    color: var(--accent3);
+  }
+  .progress-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--border);
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 18px;
+    transition: border-color 0.3s;
+  }
+  .question-card.answered { border-color: rgba(92,240,176,0.3); }
+
+  .q-meta {
+    margin-bottom: 12px;
+  }
+  .q-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    background: var(--border);
+    padding: 3px 10px;
+    border-radius: 4px;
+    color: var(--muted);
+    display: inline-block;
+  }
+  .q-text {
+    font-size: 0.97rem;
+    font-weight: 700;
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+
+  .options { display: flex; flex-direction: column; gap: 9px; }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 13px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg);
+    user-select: none;
+  }
+  .option:hover:not(.locked) {
+    border-color: var(--accent);
+    background: rgba(92,240,176,0.04);
+  }
+  .option.correct { background: var(--correct); border-color: var(--correct-border); }
+  .option.wrong   { background: var(--wrong);   border-color: var(--wrong-border); }
+  .option.locked  { cursor: default; }
+
+  .opt-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 20px;
+    color: var(--muted);
+    padding-top: 1px;
+    flex-shrink: 0;
+  }
+  .option.correct .opt-label { color: var(--correct-border); }
+  .option.wrong   .opt-label { color: var(--wrong-border); }
+  .opt-text { font-size: 0.91rem; line-height: 1.5; }
+
+  .feedback {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 7px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.65;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: var(--correct); border-left: 3px solid var(--accent);  color: #a8f5d8; }
+  .feedback.wrong-fb   { background: var(--wrong);   border-left: 3px solid var(--accent2); color: #f5a8c0; }
+
+  /* Final results */
+  #final-results {
+    display: none;
+    max-width: 500px;
+    margin: 60px auto;
+    text-align: center;
+    padding: 0 24px;
+  }
+  #final-results.show { display: block; }
+  .final-ring {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 6px solid var(--accent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    background: var(--surface);
+  }
+  .final-pct  { font-size: 2.6rem; font-weight: 800; color: var(--accent); line-height: 1; }
+  .final-sub  { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+  .final-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
+  .final-detail { font-family: 'IBM Plex Mono', monospace; color: var(--muted); font-size: 0.85rem; }
+  .restart-btn {
+    margin-top: 32px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 14px 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .restart-btn:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Statistics &amp; Computing — MCQ</h1>
+  <div class="header-right">
+    <span class="progress-text" id="progress-text">0 / 75</span>
+    <div class="score-pill" id="score-display">Score: 0 / 0</div>
+  </div>
+</header>
+<div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar"></div></div>
+
+<main id="quiz-main"></main>
+
+<div id="final-results">
+  <div class="final-ring">
+    <div class="final-pct" id="final-pct">—</div>
+    <div class="final-sub" id="final-sub">correct</div>
+  </div>
+  <div class="final-title">Quiz Complete!</div>
+  <div class="final-detail" id="final-detail"></div>
+  <button class="restart-btn" onclick="restartQuiz()">Restart Quiz</button>
+</div>
+
+<script>
+const allQuestions = [
+  // ── Bootstrap numerical ──────────────────────────────────────────────────────
+  {
+    q: "Given original sample x = [2, 4, 6, 8], what is the sample mean?",
+    opts: ["4", "5", "6", "7"],
+    ans: 1,
+    explain: "x̄ = (2+4+6+8)/4 = 20/4 = 5"
+  },
+  {
+    q: "Given x = [2, 4, 6, 8], what is the sample variance s²?",
+    opts: ["6.25", "6.67", "7.00", "5.50"],
+    ans: 1,
+    explain: "s² = 1/(n−1)×Σ(xᵢ−x̄)² = ⅓[(2−5)²+(4−5)²+(6−5)²+(8−5)²] = ⅓[9+1+1+9] = 20/3 ≈ 6.67"
+  },
+  {
+    q: "Bootstrap samples from x=[2,4,6,8]: x*¹=[2,2,4,8] (mean=4), x*²=[4,4,6,6] (mean=5), x*³=[6,6,8,8] (mean=7). What is the average of the bootstrap means?",
+    opts: ["4.33", "5.00", "5.33", "6.00"],
+    ans: 2,
+    explain: "x̄* = (4+5+7)/3 = 16/3 ≈ 5.33"
+  },
+  {
+    q: "Using the bootstrap means [4, 5, 7] and their average 5.33, what is the bootstrap standard error of the sample mean?",
+    opts: ["1.25", "1.33", "1.53", "1.67"],
+    ans: 2,
+    explain: "SE = √(1/(B−1)×Σ(x̄*ᵢ−x̄*)²) = √(½[(4−5.33)²+(5−5.33)²+(7−5.33)²]) = √2.33 ≈ 1.53"
+  },
+  {
+    q: "Bootstrap variances from x=[2,4,6,8]: s*¹=8, s*²=1.33, s*³=1.33. What is the average of the bootstrap variances?",
+    opts: ["3.00", "3.55", "3.67", "4.00"],
+    ans: 1,
+    explain: "s̄² = (8+1.33+1.33)/3 = 10.66/3 ≈ 3.55"
+  },
+  {
+    q: "Using bootstrap variances [8, 1.33, 1.33] with average 3.55, estimate the variance of the sample variance.",
+    opts: ["10", "14.83", "8", "6"],
+    ans: 1,
+    explain: "Var(s²) = 1/(B−1)×Σ(s*²ᵢ−s̄²)² = ½[(8−3.55)²+(1.33−3.55)²+(1.33−3.55)²] ≈ 14.83"
+  },
+  {
+    q: "Given Var(s²) ≈ 14.83, what is the estimated standard error of the sample variance?",
+    opts: ["2.44", "3.00", "3.85", "4.00"],
+    ans: 2,
+    explain: "SE(s²) = √14.83 ≈ 3.85"
+  },
+  {
+    q: "Original mean = 5, bootstrap mean = 5.33. What is the estimated bootstrap bias of the sample mean?",
+    opts: ["−0.33", "0.00", "0.33", "1.00"],
+    ans: 2,
+    explain: "Bias = x̄* − x̄_original = 5.33 − 5 = 0.33"
+  },
+  {
+    q: "Using original mean = 5 and SE = 1.53, what is the z-based 95% confidence interval?",
+    opts: ["(2.33, 8.33)", "(2.00, 8.00)", "(1.67, 8.33)", "(2.50, 7.50)"],
+    ans: 1,
+    explain: "CI = x̄ ± 1.96×SE = 5 ± 1.96×1.53 = 5 ± 3.00 = (2.00, 8.00)"
+  },
+  {
+    q: "Using the bias-corrected bootstrap mean = 5.33 and SE = 1.53, what is the z-based 95% CI?",
+    opts: ["(2.00, 8.00)", "(2.33, 7.67)", "(2.33, 8.33)", "(2.50, 7.50)"],
+    ans: 2,
+    explain: "CI = x̄* ± 1.96×SE = 5.33 ± 1.96×1.53 = 5.33 ± 3.00 = (2.33, 8.33)"
+  },
+  {
+    q: "Sorted bootstrap means: [4.0, 5.0, 7.0], B=3. What is the percentile-based 95% CI?",
+    opts: ["(4.0, 7.0)", "(3.0, 8.0)", "(4.5, 6.5)", "(3.5, 7.5)"],
+    ans: 0,
+    explain: "L = B×0.025 = 0.075 → position 1 → 4.0. U = B×0.975 = 2.925 → position 3 → 7.0. CI = (4.0, 7.0)"
+  },
+
+  // ── Jackknife X={11,22,33} ────────────────────────────────────────────────────
+  {
+    q: "What is the full sample mean of X = {11, 22, 33}?",
+    opts: ["20.0", "22.0", "24.5", "25.0"],
+    ans: 1,
+    explain: "x̄ = (11+22+33)/3 = 66/3 = 22.0"
+  },
+  {
+    q: "For X = {11, 22, 33}, what is the leave-one-out mean when observation 11 is removed?",
+    opts: ["27.5", "22.0", "16.5", "24.0"],
+    ans: 0,
+    explain: "x̄₍₁₎ = (22+33)/2 = 55/2 = 27.5"
+  },
+  {
+    q: "LOO means for X={11,22,33} are: 27.5, 22.0, 16.5. What is the Jackknife estimate of the mean?",
+    opts: ["22.0", "24.5", "25.0", "23.3"],
+    ans: 0,
+    explain: "x̄_jack = (27.5+22.0+16.5)/3 = 66/3 = 22.0"
+  },
+  {
+    q: "For X={11,22,33}, x̄_jack = x̄ = 22.0. What is the Jackknife bias correction term?",
+    opts: ["−2.5", "0", "2.5", "5"],
+    ans: 1,
+    explain: "Bias = (n−1)(x̄_jack − x̄) = (3−1)(22−22) = 0"
+  },
+  {
+    q: "What is the bias-corrected Jackknife estimate of the mean for X={11,22,33}?",
+    opts: ["20.0", "22.0", "24.5", "25.0"],
+    ans: 1,
+    explain: "x̄_corrected = x̄ − Bias = 22.0 − 0 = 22.0"
+  },
+  {
+    q: "LOO means: 27.5, 22.0, 16.5 (jack mean=22.0, n=3). What is the Jackknife SE for the mean?",
+    opts: ["5.25", "6.35", "4.65", "3.33"],
+    ans: 1,
+    explain: "SE = √(2/3 × [(27.5−22)²+(22−22)²+(16.5−22)²]) = √(2/3 × 60.5) = √40.33 ≈ 6.35"
+  },
+  {
+    q: "For X={11,22,33}, Jackknife mean=22 and SE=6.35. What is the 95% CI for the population mean?",
+    opts: ["(16.0, 28.0)", "(9.554, 34.446)", "(11.0, 33.0)", "(12.5, 32.5)"],
+    ans: 1,
+    explain: "CI = x̄_jack ± 1.96×SE = 22 ± 1.96×6.35 = 22 ± 12.446 = (9.554, 34.446)"
+  },
+  {
+    q: "What is the population variance σ² of X = {11, 22, 33}?",
+    opts: ["60.5", "80.67", "121.0", "30.25"],
+    ans: 1,
+    explain: "σ² = (1/n)Σ(Xᵢ−x̄)² = [(11−22)²+(22−22)²+(33−22)²]/3 = 242/3 ≈ 80.67"
+  },
+  {
+    q: "For X={11,22,33}, what is the leave-one-out variance when observation 22 is removed?",
+    opts: ["30.25", "121.0", "60.5", "81.0"],
+    ans: 1,
+    explain: "Subset {11,33}, mean=22. σ² = [(11−22)²+(33−22)²]/2 = [121+121]/2 = 121.0"
+  },
+  {
+    q: "LOO variances for X={11,22,33}: 30.25, 121.0, 30.25. What is the Jackknife estimate of σ²?",
+    opts: ["81.0", "60.5", "121.5", "30.25"],
+    ans: 1,
+    explain: "σ²_(·) = (1/n)Σσ²_(i) = (30.25+121+30.25)/3 = 181.5/3 = 60.5"
+  },
+  {
+    q: "σ̂²=80.67 and σ²_(·)=60.5 for X={11,22,33}. What is the Jackknife bias correction term for σ²?",
+    opts: ["20.5", "−40.33", "0", "40.5"],
+    ans: 1,
+    explain: "Bias = (n−1)(σ²_(·) − σ̂²) = 2(60.5−80.67) = 2(−20.17) = −40.34"
+  },
+  {
+    q: "σ̂²=80.67, Bias=−40.34. What is the bias-corrected Jackknife estimate of σ²?",
+    opts: ["60.5", "121", "81.0", "30.25"],
+    ans: 1,
+    explain: "σ̂²_corrected = σ̂² − Bias = 80.67 − (−40.34) = 121"
+  },
+  {
+    q: "For X={11,22,33}, corrected σ²=121 and SE=60.5. What is the 95% z-based CI for σ²?",
+    opts: ["(60.5, 121.5)", "(2.42, 239.58)", "(81.0, 162.0)", "(30.25, 121.0)"],
+    ans: 1,
+    explain: "CI = 121 ± 1.96×60.5 = 121 ± 118.58 ≈ (2.42, 239.58)"
+  },
+  {
+    q: "What is the standard deviation σ of X = {11, 22, 33} (σ²≈80.67)?",
+    opts: ["5.5", "8.98", "11.0", "9.0"],
+    ans: 1,
+    explain: "σ = √80.67 ≈ 8.98"
+  },
+  {
+    q: "LOO standard deviations for X={11,22,33}: 5.5, 11.0, 5.5. What is the Jackknife estimate of σ?",
+    opts: ["7.33", "6.45", "8.5", "5.5"],
+    ans: 0,
+    explain: "σ̂_jack = (5.5+11+5.5)/3 = 22/3 ≈ 7.33"
+  },
+  {
+    q: "σ̂_jack=7.33 and σ=8.98 for X={11,22,33}. What is the Jackknife bias-correction term for σ?",
+    opts: ["−3.30", "0", "+3.30", "+1.65"],
+    ans: 0,
+    explain: "Bias = (n−1)(σ̂_jack − σ) = 2(7.33−8.98) = 2(−1.65) = −3.30"
+  },
+  {
+    q: "σ=8.98, Bias=−3.30. What is the bias-corrected Jackknife estimate of σ?",
+    opts: ["5.68", "7.33", "12.28", "8.98"],
+    ans: 2,
+    explain: "σ̂_corrected = σ − Bias = 8.98 − (−3.30) = 12.28"
+  },
+  {
+    q: "For X={11,22,33}, corrected σ=12.28 and SE=3.67. What is the 95% z-based CI for σ?",
+    opts: ["(1.14, 14.49)", "(3.2, 12.4)", "(0.5, 15.0)", "(5.08, 19.48)"],
+    ans: 3,
+    explain: "CI = 12.28 ± 1.96×3.67 = 12.28 ± 7.19 ≈ (5.08, 19.48)"
+  },
+
+  // ── Jackknife X={10,15,20,25} ─────────────────────────────────────────────────
+  {
+    q: "What is the full sample mean θ of X = {10, 15, 20, 25}?",
+    opts: ["16.5", "17.5", "18.0", "20.0"],
+    ans: 1,
+    explain: "θ = (10+15+20+25)/4 = 70/4 = 17.5"
+  },
+  {
+    q: "LOO means for X={10,15,20,25}: 20.00, 18.33, 16.67, 15.00. What is the Jackknife mean θ*?",
+    opts: ["17.0", "17.5", "18.5", "19.0"],
+    ans: 1,
+    explain: "θ* = (20+18.33+16.67+15)/4 = 70/4 = 17.5"
+  },
+  {
+    q: "For X={10,15,20,25}, θ*=17.5 and θ=17.5. What is the estimated Jackknife bias?",
+    opts: ["0.0", "1.5", "−1.0", "2.0"],
+    ans: 0,
+    explain: "Bias = (n−1)(θ* − θ) = 3(17.5−17.5) = 0.0"
+  },
+  {
+    q: "For X={10,15,20,25}, Bias=0. What is the bias-corrected Jackknife estimate of θ?",
+    opts: ["16.5", "17.5", "18.5", "19.5"],
+    ans: 1,
+    explain: "θ_corrected = θ − Bias = 17.5 − 0 = 17.5"
+  },
+  {
+    q: "LOO means: 20.00, 18.33, 16.67, 15.00 (jack mean=17.5, n=4). What is the Jackknife SE?",
+    opts: ["2.0", "3.23", "1.96", "2.50"],
+    ans: 1,
+    explain: "SE = √(3/4×[(20−17.5)²+(18.33−17.5)²+(16.67−17.5)²+(15−17.5)²]) ≈ √10.42 ≈ 3.23"
+  },
+  {
+    q: "For X={10,15,20,25}, θ*=17.5 and SE=3.23. What is the 95% CI for the mean?",
+    opts: ["(13.0, 22.0)", "(13.5, 21.5)", "(15.0, 20.0)", "(11.17, 23.83)"],
+    ans: 3,
+    explain: "CI = θ* ± 1.96×SE = 17.5 ± 1.96×3.23 = 17.5 ± 6.33 = (11.17, 23.83)"
+  },
+
+  // ── ECDF ─────────────────────────────────────────────────────────────────────
+  {
+    q: "What is the primary purpose of the empirical distribution function (eCDF)?",
+    opts: [
+      "To estimate the PDF of a population",
+      "To estimate the CDF of a population",
+      "To calculate the mean of a sample",
+      "To determine the variance of a sample"
+    ],
+    ans: 1,
+    explain: "The eCDF F̂ₙ(x) is an unbiased, consistent estimator of the true CDF F(x)."
+  },
+  {
+    q: "How is the empirical distribution function formally defined?",
+    opts: [
+      "F̂ₙ(x) = (1/n) Σ Xᵢ",
+      "F̂ₙ(x) = (1/n) Σ I(Xᵢ ≤ x)",
+      "F̂ₙ(x) = (1/n) Σ (Xᵢ − X̄)²",
+      "F̂ₙ(x) = F(Xᵢ)"
+    ],
+    ans: 1,
+    explain: "F̂ₙ(x) = (1/n)Σ I(Xᵢ ≤ x) where I is an indicator function that equals 1 when Xᵢ ≤ x."
+  },
+  {
+    q: "Given x₁=3, x₂=2, x₃=5, x₄=2. What is F̂₄(4)?",
+    opts: ["0.25", "0.50", "0.75", "1.00"],
+    ans: 2,
+    explain: "Values ≤ 4: {3, 2, 2} → 3 out of 4. F̂₄(4) = 3/4 = 0.75"
+  },
+  {
+    q: "For sorted data {1.3, 1.7, 2.1, 2.5, 3.4}, what is F̂₅(2.1)?",
+    opts: ["0.2", "0.4", "0.6", "0.8"],
+    ans: 2,
+    explain: "Values ≤ 2.1: {1.3, 1.7, 2.1} → 3 out of 5. F̂₅(2.1) = 3/5 = 0.6"
+  },
+  {
+    q: "Which statement about the eCDF is true?",
+    opts: [
+      "It is a smooth curve for continuous distributions",
+      "It is a step function that jumps by 1/n at each observed data point",
+      "It is always a straight line",
+      "It is only applicable to discrete distributions"
+    ],
+    ans: 1,
+    explain: "The eCDF is a step function that increases by 1/n at each observed data point."
+  },
+  {
+    q: "What happens to the eCDF as the sample size n increases?",
+    opts: [
+      "It becomes less accurate",
+      "It converges to the true CDF F(x)",
+      "It becomes a biased estimator",
+      "It diverges from the true CDF"
+    ],
+    ans: 1,
+    explain: "By the Glivenko-Cantelli theorem, F̂ₙ(x) converges uniformly to F(x) as n → ∞."
+  },
+  {
+    q: "What is E[F̂ₙ(x)]?",
+    opts: ["0", "F(x)", "1/2", "1"],
+    ans: 1,
+    explain: "E[F̂ₙ(x)] = F(x), making F̂ₙ an unbiased estimator of F(x)."
+  },
+  {
+    q: "What is the variance of F̂ₙ(x)?",
+    opts: ["F(x)(1−F(x)) / n", "1/F(x)", "1−F(x)", "F(x)(1−F(x))"],
+    ans: 0,
+    explain: "Var(F̂ₙ(x)) = F(x)(1−F(x))/n, which decreases as n increases."
+  },
+  {
+    q: "For a Uniform distribution on [0, 2], what is E[F̂ₙ(0.8)]?",
+    opts: ["0.2", "0.4", "0.6", "0.8"],
+    ans: 1,
+    explain: "F(0.8) = 0.8/2 = 0.4. So E[F̂ₙ(0.8)] = F(0.8) = 0.4"
+  },
+  {
+    q: "Which property does F̂ₙ(x) have?",
+    opts: [
+      "Biased for small samples",
+      "Inconsistent",
+      "Consistent and unbiased",
+      "Only works for normal distributions"
+    ],
+    ans: 2,
+    explain: "F̂ₙ(x) is both unbiased (E[F̂ₙ]=F(x)) and consistent (converges uniformly to F(x))."
+  },
+  {
+    q: "The Glivenko-Cantelli theorem states that F̂ₙ(x):",
+    opts: [
+      "Converges pointwise to F(x)",
+      "Converges uniformly to F(x)",
+      "Is always normally distributed",
+      "Is unbiased for finite samples"
+    ],
+    ans: 1,
+    explain: "The theorem guarantees uniform convergence: sup|F̂ₙ(x) − F(x)| → 0 as n → ∞."
+  },
+  {
+    q: "For a Bernoulli trial Yᵢ = I(Xᵢ ≤ x) with success probability P = F(x), what is Var(Yᵢ)?",
+    opts: ["P(1−P)", "P²", "1−P", "P"],
+    ans: 0,
+    explain: "Yᵢ is Bernoulli(P), so Var(Yᵢ) = P(1−P) = F(x)(1−F(x))."
+  },
+  {
+    q: "What does the MSE of an unbiased estimator reduce to?",
+    opts: ["Bias squared", "Variance", "Standard deviation", "Zero"],
+    ans: 1,
+    explain: "MSE = Bias² + Variance. For an unbiased estimator Bias=0, so MSE = Variance."
+  },
+  {
+    q: "The DKW inequality provides:",
+    opts: [
+      "A confidence interval for the mean",
+      "A bound on the probability of large deviations between F̂ₙ and F",
+      "The exact value of F(x)",
+      "The bias of F̂ₙ"
+    ],
+    ans: 1,
+    explain: "The DKW inequality: P(sup|F̂ₙ(x)−F(x)| > ε) ≤ 2e^(−2nε²). It bounds deviation of eCDF from true CDF."
+  },
+  {
+    q: "A (1−α) confidence band for F(x) using the DKW inequality is:",
+    opts: [
+      "F̂ₙ(x) ± √(ln(2/α) / 2n)",
+      "F̂ₙ(x) ± σ/√n",
+      "F̂ₙ(x) ± 1/n",
+      "F̂ₙ(x) ± α"
+    ],
+    ans: 0,
+    explain: "The DKW-based confidence band: F̂ₙ(x) ± √(ln(2/α)/2n)"
+  },
+
+  // ── Statistical Inference ────────────────────────────────────────────────────
+  {
+    q: "What is the primary purpose of statistical inference?",
+    opts: [
+      "To summarize sample data",
+      "To make conclusions about a population from sample data",
+      "To collect data from a population",
+      "To visualize probability distributions"
+    ],
+    ans: 1,
+    explain: "Statistical inference uses sample data to draw conclusions about the broader population."
+  },
+  {
+    q: "An estimator is best described as:",
+    opts: [
+      "A fixed population parameter",
+      "A random variable used to estimate a population parameter",
+      "The true value of a sample statistic",
+      "A graphical representation of data"
+    ],
+    ans: 1,
+    explain: "An estimator T(X₁,...,Xₙ) is a function of the sample — itself a random variable — used to estimate θ."
+  },
+  {
+    q: "The bias of an estimator θ̂ is defined as:",
+    opts: ["E(θ̂) − θ", "θ − E(θ̂)", "V(θ̂)", "θ̂ − θ"],
+    ans: 0,
+    explain: "Bias(θ̂) = E(θ̂) − θ. Zero bias means the estimator is unbiased."
+  },
+  {
+    q: "Which of the following is NOT a focus of statistical inference?",
+    opts: [
+      "Descriptive statistics",
+      "Parameter estimation",
+      "Hypothesis testing",
+      "Drawing conclusions about a population from sample data"
+    ],
+    ans: 0,
+    explain: "Descriptive statistics summarize the sample itself. Inference is about drawing conclusions beyond the sample."
+  },
+  {
+    q: "A statistic used to estimate an unknown parameter is called:",
+    opts: ["Population parameter", "Estimator", "Margin of error", "Confidence interval"],
+    ans: 1,
+    explain: "An estimator is a function of the sample data used to estimate an unknown population parameter."
+  },
+  {
+    q: "Which of the following is a point estimate for the population mean μ?",
+    opts: ["S²", "X̄", "σ²/n", "σ"],
+    ans: 1,
+    explain: "The sample mean X̄ = (1/n)Σxᵢ is the standard point estimate for μ."
+  },
+  {
+    q: "What happens to the width of a confidence interval as sample size n increases?",
+    opts: ["Increases", "Decreases", "Remains unchanged", "Depends on α"],
+    ans: 1,
+    explain: "Width ∝ 1/√n, so larger samples yield narrower (more precise) confidence intervals."
+  },
+  {
+    q: "For a 95% CI of μ when n≥30 and σ is known, the critical value is:",
+    opts: ["tα/2,n−1", "1.96", "χ²α/2,n−1", "Fα/2,n−1,n−1"],
+    ans: 1,
+    explain: "For large samples with known σ, we use the Z-distribution. Z₀.₀₂₅ = 1.96."
+  },
+  {
+    q: "When n < 30 and σ is unknown, which statistic follows a t-distribution with n−1 degrees of freedom?",
+    opts: [
+      "Z = (X̄−μ) / (σ/√n)",
+      "T = (X̄−μ) / (S/√n)",
+      "U = (n−1)S² / σ²",
+      "F = S₁²/S₂²"
+    ],
+    ans: 1,
+    explain: "T = (X̄−μ)/(S/√n) ~ t_{n−1} when the population is Normal and σ is unknown."
+  },
+  {
+    q: "If σ is unknown and n < 30, which distribution is used to construct a CI for μ?",
+    opts: ["Normal", "t-distribution", "χ²-distribution", "F-distribution"],
+    ans: 1,
+    explain: "With unknown σ and small n, we use the t-distribution with n−1 degrees of freedom."
+  },
+  {
+    q: "The plug-in variance estimator σ̂² = (1/n)Σ(xᵢ−x̄)² is:",
+    opts: [
+      "Unbiased and consistent",
+      "Biased but consistent",
+      "Unbiased but inconsistent",
+      "Neither unbiased nor consistent"
+    ],
+    ans: 1,
+    explain: "Dividing by n (not n−1) makes it biased: E[σ̂²] = (n−1)/n × σ². But it is consistent as n→∞."
+  },
+  {
+    q: "For large n, the sample mean X̄ follows approximately:",
+    opts: ["N(μ, σ²)", "N(μ, σ²/n)", "N(0,1)", "N(μ, σ/n)"],
+    ans: 1,
+    explain: "By the CLT, X̄ ~ N(μ, σ²/n) for large n, regardless of the population distribution."
+  },
+
+  // ── Bootstrap Theory ─────────────────────────────────────────────────────────
+  {
+    q: "In bootstrap resampling, data points are drawn:",
+    opts: [
+      "Without replacement from the original sample",
+      "With replacement from the population",
+      "With replacement from the original sample",
+      "Without replacement from the population"
+    ],
+    ans: 2,
+    explain: "Bootstrap draws n samples WITH replacement from the original sample, mimicking sampling from the population."
+  },
+  {
+    q: "The bootstrap standard error of a statistic is estimated by:",
+    opts: [
+      "The standard deviation of the original sample",
+      "The standard deviation of bootstrap replicates",
+      "The variance of the population",
+      "The mean of bootstrap replicates"
+    ],
+    ans: 1,
+    explain: "SE_boot = std dev of {θ̂*¹, ..., θ̂*ᴮ} — the spread of replicate statistics."
+  },
+  {
+    q: "The bootstrap estimate of bias for θ̂ is:",
+    opts: [
+      "θ̂* − θ̂, where θ̂* is the mean of bootstrap replicates",
+      "θ̂ − θ, where θ is the true population parameter",
+      "The variance of bootstrap replicates",
+      "The SE of the original estimator"
+    ],
+    ans: 0,
+    explain: "Bias_boot = θ̂* − θ̂ (bootstrap mean minus original estimate)"
+  },
+  {
+    q: "A 95% percentile-based bootstrap CI is constructed by:",
+    opts: [
+      "Using the mean of replicates ± 1.96 SE",
+      "Sorting bootstrap replicates and selecting the 2.5th and 97.5th percentiles",
+      "Calculating the bias-adjusted estimates",
+      "Using the empirical distribution of the population"
+    ],
+    ans: 1,
+    explain: "Sort the B bootstrap replicates and take the 2.5th and 97.5th percentiles as the CI bounds."
+  },
+  {
+    q: "The bootstrap method is particularly useful when:",
+    opts: [
+      "The sample size is very large and normally distributed",
+      "The sampling distribution is unknown or difficult to derive",
+      "The population variance is known",
+      "The data is perfectly representative of the population"
+    ],
+    ans: 1,
+    explain: "Bootstrap excels when no closed-form SE formula exists — complex statistics, small samples, non-normal data."
+  },
+  {
+    q: "The plug-in principle in bootstrap involves:",
+    opts: [
+      "Replacing the population distribution with the empirical distribution",
+      "Using theoretical distributions for all calculations",
+      "Ignoring the original sample data",
+      "Only working with normally distributed data"
+    ],
+    ans: 0,
+    explain: "Plug-in: replace unknown F(x) with F̂ₙ(x) to estimate population quantities."
+  },
+  {
+    q: "A key difference between bootstrap and large sample theory is:",
+    opts: [
+      "Bootstrap assumes normality; large sample theory does not",
+      "Bootstrap relies on resampling; large sample theory relies on asymptotic approximations",
+      "Large sample theory requires small samples",
+      "Bootstrap is only applicable to parametric statistics"
+    ],
+    ans: 1,
+    explain: "Bootstrap is simulation-based (resampling), while large sample theory uses CLT and asymptotic results."
+  },
+  {
+    q: "A limitation of the bootstrap method is:",
+    opts: [
+      "It cannot be used for non-normal data",
+      "It depends heavily on the representativeness of the original sample",
+      "It requires knowledge of the true population distribution",
+      "It only works for large sample sizes"
+    ],
+    ans: 1,
+    explain: "Bootstrap assumes the original sample represents the population. A poor sample → poor bootstrap estimates."
+  },
+  {
+    q: "Increasing the number of bootstrap replicates B:",
+    opts: [
+      "Increases the original sample size",
+      "Improves the accuracy of the estimated sampling distribution",
+      "Guarantees unbiased estimates",
+      "Reduces the standard error of the population"
+    ],
+    ans: 1,
+    explain: "Larger B gives a smoother approximation of the sampling distribution but doesn't change the data itself."
+  },
+  {
+    q: "Which is a key advantage of the bootstrap method?",
+    opts: [
+      "It requires knowledge of the true population distribution",
+      "It provides exact theoretical standard errors",
+      "It works for complex estimators without closed-form solutions",
+      "It guarantees unbiased estimates for all statistics"
+    ],
+    ans: 2,
+    explain: "Bootstrap can estimate SE and CI for any statistic — median, correlation, ratio — without needing a formula."
+  },
+
+  // ── MLE & MME ─────────────────────────────────────────────────────────────────
+  {
+    q: "In the Method of Moments (MME), how are parameters estimated?",
+    opts: [
+      "Population moments are set equal to sample moments to solve for parameters",
+      "Sample moments are always larger than population moments",
+      "Population moments are ignored in favor of theoretical values",
+      "Only the first moment is used"
+    ],
+    ans: 0,
+    explain: "MME: set E(Xᵏ) = (1/n)ΣXᵢᵏ for k=1,2,... and solve for unknown parameters."
+  },
+  {
+    q: "For a Poisson distribution with parameter λ, the MME estimator is:",
+    opts: ["λ̂ = 1/X̄", "λ̂ = X̄", "λ̂ = S²", "λ̂ = ΣXᵢ"],
+    ans: 1,
+    explain: "For Poisson, E(X)=λ. Setting E(X) = X̄ gives λ̂ = X̄."
+  },
+  {
+    q: "The likelihood function L(θ|x) in MLE represents:",
+    opts: [
+      "The probability of observing the sample data given a parameter value",
+      "The cumulative distribution function of the data",
+      "The variance of the sample",
+      "The bias of the estimator"
+    ],
+    ans: 0,
+    explain: "L(θ|x) = P(X=x|θ) — how likely the observed data is under parameter value θ."
+  },
+  {
+    q: "For an exponential distribution, the MLE estimator for λ is:",
+    opts: ["λ̂ = X̄", "λ̂ = 1/X̄", "λ̂ = S²", "λ̂ = ΣXᵢ/n"],
+    ans: 1,
+    explain: "Log-likelihood ℓ(λ) = n·ln(λ) − λΣXᵢ. Setting dℓ/dλ = 0: λ̂ = n/ΣXᵢ = 1/X̄."
+  },
+  {
+    q: "For a geometric distribution with parameter p, both MME and MLE give:",
+    opts: ["p̂ = 1/X̄", "p̂ = X̄", "p̂ = S²", "p̂ = ΣXᵢ/n"],
+    ans: 0,
+    explain: "For Geometric, E(X)=1/p, so p̂ = 1/X̄ from both MME and MLE."
+  },
+  {
+    q: "The invariance property of MLE states that:",
+    opts: [
+      "MLE estimators are always unbiased",
+      "If θ̂ is the MLE of θ, then g(θ̂) is the MLE of g(θ) for one-to-one g",
+      "MLE estimators are invariant under data transformations",
+      "MLE requires no differentiation steps"
+    ],
+    ans: 1,
+    explain: "Invariance: if θ̂ is the MLE of θ, then g(θ̂) is the MLE of g(θ). E.g., if λ̂ is MLE of λ, then 1/λ̂ is MLE of the mean 1/λ."
+  },
+  {
+    q: "Why is the log-likelihood function used in MLE instead of the likelihood directly?",
+    opts: [
+      "It simplifies differentiation and converts products to sums",
+      "It guarantees unbiased estimators",
+      "It always has a unique maximum",
+      "It is easier to visualize"
+    ],
+    ans: 0,
+    explain: "log converts products to sums, making differentiation tractable. log is monotone so the argmax is preserved."
+  },
+  {
+    q: "Which step is NOT part of deriving an MLE estimator?",
+    opts: [
+      "Write the joint likelihood function",
+      "Take the logarithm of the likelihood",
+      "Differentiate the log-likelihood w.r.t. the parameter",
+      "Set the population moments equal to sample moments"
+    ],
+    ans: 3,
+    explain: "Setting moments equal is the MME approach. MLE maximizes L(θ) — no moment matching required."
+  },
+  {
+    q: "The primary advantage of empirical likelihood methods is:",
+    opts: [
+      "They require strict parametric assumptions",
+      "They are non-parametric and don't assume a specific distributional form",
+      "They are computationally simpler than bootstrap",
+      "They only work for normally distributed data"
+    ],
+    ans: 1,
+    explain: "Empirical likelihood is non-parametric — no distributional form required. It assigns data-driven weights to observations."
+  },
+  {
+    q: "A 95% CI for θ using the log-likelihood curve includes all values where:",
+    opts: [
+      "The log-likelihood is within 1.92 units of the maximum",
+      "The log-likelihood equals zero",
+      "The likelihood function is symmetric",
+      "The data is normally distributed"
+    ],
+    ans: 0,
+    explain: "By Wilks' theorem, the likelihood CI is the set {θ : ℓ(θ) ≥ ℓ(θ̂) − 1.92} for a 95% CI (χ²₁ cutoff ÷ 2 = 1.92)."
+  },
+
+  // ── Jackknife theory ──────────────────────────────────────────────────────────
+  {
+    q: "What is the primary purpose of the jackknife resampling method?",
+    opts: [
+      "To increase the sample size for better accuracy",
+      "To estimate bias and standard error by systematically leaving out one observation at a time",
+      "To replace bootstrapping in all statistical analyses",
+      "To ensure all data points are normally distributed"
+    ],
+    ans: 1,
+    explain: "Jackknife creates n leave-one-out samples, each of size n−1, to estimate bias and SE of an estimator."
+  },
+  {
+    q: "The jackknife estimate of bias for θ̂ is:",
+    opts: [
+      "(n−1)(θ̂_(·) − θ̂), where θ̂_(·) is the mean of jackknife replicates",
+      "θ̂ − θ, where θ is the true population parameter",
+      "The variance of jackknife replicates",
+      "The standard error of the original sample"
+    ],
+    ans: 0,
+    explain: "Bias_jack = (n−1)(θ̂_(·) − θ̂), where θ̂_(·) = (1/n)Σθ̂₍₋ⱼ₎."
+  },
+  {
+    q: "The jackknife standard error is calculated as:",
+    opts: [
+      "√((1/n) Σ(θ̂₍₋ⱼ₎ − θ̂)²)",
+      "√((n−1)/n × Σ(θ̂₍₋ⱼ₎ − θ̂_(·))²)",
+      "The standard deviation of the original sample",
+      "The MSE of the estimator"
+    ],
+    ans: 1,
+    explain: "SE_jack = √((n−1)/n × Σ(θ̂₍₋ⱼ₎ − θ̂_(·))²)"
+  },
+  {
+    q: "Applying the jackknife to an unbiased estimator (e.g., sample mean X̄) yields:",
+    opts: [
+      "A reduced bias but higher variance",
+      "No change in the estimator",
+      "A biased estimator",
+      "A wider confidence interval"
+    ],
+    ans: 1,
+    explain: "For unbiased estimators, Bias_jack = (n−1)(θ̂_(·) − θ̂) = 0, so the corrected estimate equals the original."
+  },
+  {
+    q: "The jackknife method performs poorly for:",
+    opts: [
+      "Linear statistics like the mean",
+      "Non-smooth or non-linear statistics (e.g., median, correlation)",
+      "Large sample sizes",
+      "Normally distributed data"
+    ],
+    ans: 1,
+    explain: "Jackknife requires smooth (differentiable) statistics. For the median and other non-smooth statistics, bootstrap is preferred."
+  },
+  {
+    q: "In parametric bootstrap, resampling assumes:",
+    opts: [
+      "Data comes from a known distribution with estimated parameters",
+      "Data is resampled directly without distributional assumptions",
+      "Only non-parametric methods are valid",
+      "Observations are perturbed with added noise"
+    ],
+    ans: 0,
+    explain: "Parametric bootstrap: fit a distribution (e.g., Normal, Exponential) to the data, then resample from that fitted distribution."
+  }
+];
+
+// Shuffle array in-place (Fisher-Yates)
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+let questions = shuffle([...allQuestions]);
+let answers = {}; // index → chosen option
+
+function init() {
+  renderAll();
+}
+
+function renderAll() {
+  const main = document.getElementById('quiz-main');
+  main.innerHTML = questions.map((q, qi) => {
+    const chosen = answers[qi] ?? null;
+    const answered = chosen !== null;
+    return `
+      <div class="question-card ${answered ? 'answered' : ''}" id="card_${qi}">
+        <div class="q-meta"><span class="q-num">Q${qi + 1}</span></div>
+        <div class="q-text">${q.q}</div>
+        <div class="options">
+          ${q.opts.map((opt, oi) => {
+            let cls = '';
+            if (answered) {
+              if (oi === q.ans) cls = 'correct';
+              else if (oi === chosen) cls = 'wrong';
+              cls += ' locked';
+            }
+            return `<div class="option ${cls}" onclick="choose(${qi}, ${oi})">
+              <span class="opt-label">${'ABCD'[oi]}</span>
+              <span class="opt-text">${opt}</span>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="feedback ${answered ? (chosen === q.ans ? 'correct-fb' : 'wrong-fb') : ''} ${answered ? 'show' : ''}" id="fb_${qi}">
+          ${answered ? (chosen === q.ans ? '✓ Correct! ' : '✗ Incorrect. ') + q.explain : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  updateHUD();
+}
+
+function choose(qi, oi) {
+  if (answers[qi] !== undefined) return;
+  answers[qi] = oi;
+  const q = questions[qi];
+
+  // Update card border
+  document.getElementById(`card_${qi}`).classList.add('answered');
+
+  // Update options
+  const opts = document.querySelectorAll(`#card_${qi} .option`);
+  opts.forEach((el, i) => {
+    el.classList.add('locked');
+    if (i === q.ans) el.classList.add('correct');
+    else if (i === oi) el.classList.add('wrong');
+  });
+
+  // Show feedback
+  const fb = document.getElementById(`fb_${qi}`);
+  const correct = oi === q.ans;
+  fb.className = `feedback ${correct ? 'correct-fb' : 'wrong-fb'} show`;
+  fb.textContent = (correct ? '✓ Correct! ' : '✗ Incorrect. ') + q.explain;
+
+  updateHUD();
+
+  // Show final screen when all done
+  if (Object.keys(answers).length === questions.length) {
+    setTimeout(showFinal, 600);
+  }
+}
+
+function updateHUD() {
+  const done = Object.keys(answers).length;
+  const total = questions.length;
+  const correct = Object.entries(answers).filter(([qi, oi]) => oi === questions[qi].ans).length;
+
+  document.getElementById('progress-bar').style.width = `${(done / total) * 100}%`;
+  document.getElementById('progress-text').textContent = `${done} / ${total}`;
+  document.getElementById('score-display').textContent = `Score: ${correct} / ${done}`;
+}
+
+function showFinal() {
+  const total = questions.length;
+  const correct = Object.entries(answers).filter(([qi, oi]) => oi === questions[qi].ans).length;
+  const pct = Math.round((correct / total) * 100);
+
+  document.getElementById('quiz-main').style.display = 'none';
+  const fr = document.getElementById('final-results');
+  fr.classList.add('show');
+  document.getElementById('final-pct').textContent = `${pct}%`;
+  document.getElementById('final-sub').textContent = `${correct} / ${total} correct`;
+  document.getElementById('final-detail').textContent =
+    pct === 100 ? '🎉 Perfect score! Outstanding!' :
+    pct >= 80  ? '🟢 Great work!' :
+    pct >= 60  ? '🟡 Good effort — review the explanations.' :
+                 '🔴 Keep studying — you can do it!';
+}
+
+function restartQuiz() {
+  questions = shuffle([...allQuestions]);
+  answers = {};
+  document.getElementById('quiz-main').style.display = 'block';
+  document.getElementById('final-results').classList.remove('show');
+  renderAll();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+init();
+</script>
+</body>
+</html>
